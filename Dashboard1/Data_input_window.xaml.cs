@@ -14,11 +14,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using Dashboard1.Library;
 using System.IO;
-using iTextSharp;
-using iTextSharp.text;
-using iTextSharp.text.pdf;
-using iTextSharp.text.pdf.parser;
-using iTextSharp.text.html;
+
 using System.Drawing;
 using System.IO.Ports;
 using System.Threading;
@@ -272,17 +268,32 @@ namespace Dashboard1
                 }
                 else
                 {
+                    Thread.Sleep(delay);
+                    OpenCon_Port_local(mySerialPort, BaudRate);
+                    mySerialPort.DiscardInBuffer();
+                    mySerialPort.DiscardOutBuffer();
+                    Sensor_input_Helper.Command_Write(mySerialPort, ResultGrain);
+                    mySerialPort.DiscardInBuffer();
+                    mySerialPort.DiscardOutBuffer();
+
+                    Sensor_input_Helper.Command_Write(mySerialPort, ResultMeasure);
+                    //StatusListen = true;
+                    mySerialPort.DiscardInBuffer();
+                    mySerialPort.DiscardOutBuffer();
+
+                    MessageBox.Show("Start Next Sequence", application_name);
+                    /*
                     Task.Delay(delay).ContinueWith(_ =>
                     {
-                        //OpenCon_Port_local(mySerialPort, BaudRate);
+                        OpenCon_Port_local(mySerialPort, BaudRate);
                         Sensor_input_Helper.Command_Write(mySerialPort, ResultGrain);
                         Sensor_input_Helper.Command_Write(mySerialPort, ResultMeasure);
                         //StatusListen = true;
 
                         MessageBox.Show("Start Next Sequence", application_name);
                     }
-);
-
+                    );
+                    */
                     //Thread.Sleep(delay);
                     
 
@@ -440,7 +451,7 @@ namespace Dashboard1
                 Sensor_input_Helper.Command_Write(mySerialPort, ResultMeasure);
                 MessageBox.Show("Sensor Start Collecting Data", application_name);
 
-                //StatusListen = true;
+                StatusListen = true;
             }
             //RunSensor();
 
@@ -560,7 +571,7 @@ namespace Dashboard1
 
                     if (Result_Parsing != "" && Result_Parsing != null && !Result_Parsing.Trim().ToLower().Contains("r"))
                     {
-
+                        StatusListen = true;
                         Console.WriteLine("Nilai Measure adalah: " + Result_Parsing);
                         
                         
@@ -570,7 +581,7 @@ namespace Dashboard1
 
                             AllText = GetWords(Measure);
                             //Result_Parsing = AllText[1];
-                            Result_Parsing = AllText[1].Substring(5, 7);
+                            Result_Parsing = AllText[1].Substring(5, 3);
                             //data_measure_2 data_final_update =
 
                             data_Average.Add(new data_measure_2(counter_data + 1, Result_Parsing, (DateTime.Now).ToString()));
@@ -636,14 +647,19 @@ namespace Dashboard1
                     }
 
                     
-                    else if (data_finals_update.Count % NumberGrain_Frekuensi == 0 && data_finals_update.Count > 0)
+                    else if (data_finals_update.Count % NumberGrain_Frekuensi == 0 && data_finals_update.Count > 0 && StatusListen == true)
                     {
                         Sensor_input_Helper.Command_MoisturAggregate(mySerialPort);
-                        //mySerialPort.Close();
+                        mySerialPort.Close();
+                        StatusListen = false;
+                        //mySerialPort.DiscardInBuffer();
+                        //mySerialPort.DiscardOutBuffer();
                         Application.Current.Dispatcher.Invoke(new Action(() =>
                         {
                             //MessageBox.Show("Port is opened. Start Collecting Data", application_name);
                             //this.DataContext = this;
+                            
+
                             RunSensor();
                         }));
                         
@@ -738,24 +754,26 @@ namespace Dashboard1
         {
             //tbkLabel.Text = "two seconds delay";
             MessageBox.Show("start baiz waiting", application_name);
-            
+            /*
             //var page = new Page2();
             //page.Show();
 
-            Task.Delay(10000).ContinueWith(_ =>
-            {
-                Task.Delay(10000).ContinueWith(_ =>
-                {
-                    Task.Delay(10000).ContinueWith(_ =>
-                    {
-                        Sensor_input_Helper.Command_Check(mySerialPort);
-                        Sensor_input_Helper.Command_CheckData(mySerialPort);
-                        MessageBox.Show("Finsih baiz 2 waiting", application_name);
-                    });
+            _ = Task.Delay(10000).ContinueWith(_ =>
+              {
+                  Task.Delay(10000).ContinueWith(_ =>
+                  {
+                      Task.Delay(10000).ContinueWith(_ =>
+                      {
+                          Sensor_input_Helper.Command_Check(mySerialPort);
+                          Sensor_input_Helper.Command_CheckData(mySerialPort);
+                          MessageBox.Show("Finsih baiz 2 waiting", application_name);
+                      });
 
-                });
-            }
+                  });
+              }
+            
             );
+            */
         }
 
         private void Button3_Baiz_Click(object sender, RoutedEventArgs e)
@@ -826,7 +844,7 @@ namespace Dashboard1
             timer_baiz_5 = timer_baiz_5 + 1;
             // Updating the Label which displays the current second
             //lblSeconds.Content = DateTime.Now.Second;
-            Sensor_input_Helper.Command_Check(mySerialPort);
+            //Sensor_input_Helper.Command_Check(mySerialPort);
             Sensor_input_Helper.Command_CheckData(mySerialPort);
 
             // Forcing the CommandManager to raise the RequerySuggested event
