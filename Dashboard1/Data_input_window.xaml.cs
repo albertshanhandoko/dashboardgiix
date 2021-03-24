@@ -51,7 +51,10 @@ namespace Dashboard1
         int NumberGrain;
         int NumberMeasure;
         int NumberGrain_Frekuensi = -1;
-
+        int current_interval = 0;
+        int delay = 0;
+        string ResultGrain = "";
+        string ResultMeasure = "";
         bool StatusListen = false;
 
         List<data_measure_2> data_finals_update = new List<data_measure_2> { };
@@ -66,7 +69,7 @@ namespace Dashboard1
 
         List<data_measure_2> data_Grid_3_list_a = new List<data_measure_2> { };
         List<data_measure_2> data_Grid_3_list_b = new List<data_measure_2> { };
-        
+
         List<data_measure_2> data_Grid_4_list_a = new List<data_measure_2> { };
         List<data_measure_2> data_Grid_4_list_b = new List<data_measure_2> { };
 
@@ -156,7 +159,7 @@ namespace Dashboard1
         public void RunSensor()
         {
 
-           
+
             int NumberGrain = ComboBox_NumberGrain.SelectedIndex;
             int NumberMeasure = ComboBox_NumberMeasure.SelectedIndex;
 
@@ -244,7 +247,7 @@ namespace Dashboard1
             if (counter_interval > 0)
             {
 
-                
+
                 counter_interval = counter_interval - 1;
 
                 if (counter_interval == 0)
@@ -295,7 +298,7 @@ namespace Dashboard1
                     );
                     */
                     //Thread.Sleep(delay);
-                    
+
 
                 }
 
@@ -351,11 +354,11 @@ namespace Dashboard1
             NumberMeasure = ComboBox_NumberMeasure.SelectedIndex;
 
             //TimeInterval = ComboBox_TimeInterval.SelectedIndex;
-            int delay;
+            //int delay;
             switch (TimeInterval)
             {
                 default:
-                    delay = 3000;
+                    delay = 30000;
                     break;
                 case 0:
                     delay = 30000;
@@ -368,7 +371,7 @@ namespace Dashboard1
                     break;
             }
 
-            string ResultGrain;
+
             switch (NumberGrain)
             {
                 case 0:
@@ -398,7 +401,6 @@ namespace Dashboard1
 
             }
 
-            string ResultMeasure = "";
             switch (NumberMeasure)
             {
                 case -1:
@@ -444,6 +446,8 @@ namespace Dashboard1
                 ComboBox_NumberGrain.IsEnabled = false;
                 ComboBox_NumberMeasure.IsEnabled = false;
 
+                //Sensor_input_Helper.Command_Check(mySerialPort);
+
                 Sensor_input_Helper.Command_Write(mySerialPort, ResultGrain);
                 //mySerialPort.DiscardOutBuffer();
                 //mySerialPort.DiscardInBuffer();
@@ -473,7 +477,7 @@ namespace Dashboard1
 
             mySerialPort.Open();
             Application.Current.Dispatcher.Invoke(new Action(() => {
-                MessageBox.Show("Port is opened.", application_name);
+                //MessageBox.Show("Port is opened.", application_name);
             }));
             //Application.Run();
 
@@ -534,144 +538,224 @@ namespace Dashboard1
                  * 1. Split character by Y
                  */
                 Thread.Sleep(1000);// this solves the problem
-                byte[] readBuffer = new byte[mySerialPort.ReadBufferSize];
-                int readLen = mySerialPort.Read(readBuffer, 0, readBuffer.Length);
-                string readStr = string.Empty;
 
-                readStr = Encoding.UTF8.GetString(readBuffer, 0, readLen);
-                //readStr = Encoding.UTF8.GetString(readBuffer,0,readLen);
-                readStr = readStr.Trim();
-                Console.WriteLine("ReadStr adalah: " + readStr);
-
-                char[] delimiter_r = { '\r' };
-                string[] Measures_With_U = readStr.Split(delimiter_r);
-
-                List<string> Measure_Results = new List<string>();
-
-                List<string> AllText = new List<string>();
-
-                foreach (var Measure in Measures_With_U)
+                if (data_Average.Count() == counter_interval && current_interval > 0 && counter_interval > 0)
                 {
-                    //Test_Isengs = GetWords(Measure);
 
-                    string Result_Parsing = GetWords(Measure).FirstOrDefault();
-                    Console.WriteLine("Result Parsing adalah: " + Result_Parsing);
-                    //Measure_Results.Add(Result_Parsing);
+                    mySerialPort.DiscardInBuffer();
+                    mySerialPort.DiscardOutBuffer();
+                    mySerialPort.Close();
 
-                    string[] charactersToReplace = new string[] { @"\t", @"\n", @"\r", " ", "<CR>", "<LF>" };
-
-                    if (Result_Parsing != "" && Result_Parsing != null)
+                    Application.Current.Dispatcher.Invoke(new Action(() =>
                     {
-                        foreach (string s in charactersToReplace)
+                        string Replace_Average = ",";
+                        string temp_average;
+                        float average = 0;
+                        foreach (data_measure_2 data in data_Average)
                         {
-                            Result_Parsing = Result_Parsing.Replace(s, "");
+                            temp_average = data.Measures;
+                            temp_average = temp_average.Replace(Replace_Average, "");
+                            average = average + float.Parse(temp_average);
                         }
-                    }
+                        float final_average = average/10/data_Average.Count() ;
 
+                        string final_average_str = final_average.ToString();
+                        
+                        //final_average_str = String.Concat(final_average_str.Substring(0, final_average_str.Length - 1)
+                        //            , ".", final_average_str.Substring(final_average_str.Length - 1, 1));
 
-                    if (Result_Parsing != "" && Result_Parsing != null && !Result_Parsing.Trim().ToLower().Contains("r"))
+                        Average_Final.Text = final_average_str;
+                        MessageBox.Show("All Measurement Finish", application_name);
+
+                    }));
+
+                }
+                else
+                {
+                    byte[] readBuffer = new byte[mySerialPort.ReadBufferSize];
+                    int readLen = mySerialPort.Read(readBuffer, 0, readBuffer.Length);
+                    string readStr = string.Empty;
+
+                    readStr = Encoding.UTF8.GetString(readBuffer, 0, readLen);
+                    //readStr = Encoding.UTF8.GetString(readBuffer,0,readLen);
+                    readStr = readStr.Trim();
+                    Console.WriteLine("ReadStr adalah: " + readStr);
+
+                    char[] delimiter_r = { '\r' };
+                    string[] Measures_With_U = readStr.Split(delimiter_r);
+
+                    List<string> Measure_Results = new List<string>();
+
+                    List<string> AllText = new List<string>();
+
+                    foreach (var Measure in Measures_With_U)
                     {
-                        StatusListen = true;
-                        Console.WriteLine("Nilai Measure adalah: " + Result_Parsing);
-                        
-                        
-                        data_measure_2 data_final_update = new data_measure_2(counter_data + 1, Result_Parsing, (DateTime.Now).ToString());
-                        if (Result_Parsing.Contains("-") || (Result_Parsing.Length) >4)
+                        //Test_Isengs = GetWords(Measure);
+
+                        string Result_Parsing = GetWords(Measure).FirstOrDefault();
+                        Console.WriteLine("Result Parsing adalah: " + Result_Parsing);
+                        //Measure_Results.Add(Result_Parsing);
+
+                        string[] charactersToReplace = new string[] { @"\t", @"\n", @"\r", " ", "<CR>", "<LF>" };
+
+                        if (Result_Parsing != "" && Result_Parsing != null)
                         {
+                            foreach (string s in charactersToReplace)
+                            {
+                                Result_Parsing = Result_Parsing.Replace(s, "");
+                            }
+                        }
 
-                            AllText = GetWords(Measure);
-                            //Result_Parsing = AllText[1];
-                            Result_Parsing = AllText[1].Substring(5, 3);
-                            //data_measure_2 data_final_update =
 
-                            data_Average.Add(new data_measure_2(counter_data + 1, Result_Parsing, (DateTime.Now).ToString()));
+                        if (Result_Parsing != "" && Result_Parsing != null && !Result_Parsing.Trim().ToLower().Contains("r"))
+                        {
+                            StatusListen = true;
+                            Console.WriteLine("Nilai Measure adalah: " + Result_Parsing);
 
-                            //data_Average.Add(data_final_update);
+
+
+                            if (Result_Parsing.Contains("-") || (Result_Parsing.Length) > 4)
+                            {
+
+                                AllText = GetWords(Measure);
+                                //Result_Parsing = AllText[1];
+
+                                Result_Parsing = AllText[1].Substring(5, 3);
+                                Result_Parsing = String.Concat(Result_Parsing.Substring(0, Result_Parsing.Length - 1)
+                                    , ".", Result_Parsing.Substring(Result_Parsing.Length - 1, 1));
+
+                                //data_measure_2 data_final_update =
+
+                                data_Average.Add(new data_measure_2(100, Result_Parsing, (DateTime.Now).ToString()));
+
+                                //data_Average.Add(data_final_update);
+
+                            }
+                            else
+                            {
+                                Result_Parsing = String.Concat(Result_Parsing.Substring(0, Result_Parsing.Length - 1)
+                                    , ".", Result_Parsing.Substring(Result_Parsing.Length - 1, 1));
+
+                                data_measure_2 data_final_update = new data_measure_2(counter_data + 1, Result_Parsing, (DateTime.Now).ToString());
+
+                                data_finals_update.Add(data_final_update);
+                                data_finals_update_2.Add(data_final_update);
+
+                                //var result = from db.MyTable.Where(d => (double)d.Price >= minValue && (double)d.Price <= maxValue)
+
+                                var data_Grid_1 = data_finals_update.Where(p => p.Id > 0 && p.Id <= 1 * NumberGrain_Frekuensi);
+                                data_Grid_1_list_a = data_Grid_1.ToList();
+                                data_Grid_1_list_b = data_Grid_1.ToList();
+
+                                var data_Grid_2 = data_finals_update.Where(p => p.Id > 1 * NumberGrain_Frekuensi && p.Id <= 2 * NumberGrain_Frekuensi);
+                                data_Grid_2_list_a = data_Grid_2.ToList();
+                                data_Grid_2_list_b = data_Grid_2.ToList();
+
+                                var data_Grid_3 = data_finals_update.Where(p => p.Id > 2 * NumberGrain_Frekuensi && p.Id <= 3 * NumberGrain_Frekuensi);
+                                data_Grid_3_list_a = data_Grid_3.ToList();
+                                data_Grid_3_list_b = data_Grid_3.ToList();
+
+                                var data_Grid_4 = data_finals_update.Where(p => p.Id > 3 * NumberGrain_Frekuensi && p.Id <= 4 * NumberGrain_Frekuensi);
+                                data_Grid_4_list_a = data_Grid_4.ToList();
+                                data_Grid_4_list_b = data_Grid_4.ToList();
+
+                                var data_Grid_5 = data_finals_update.Where(p => p.Id > 4 * NumberGrain_Frekuensi && p.Id <= 5 * NumberGrain_Frekuensi);
+                                data_Grid_5_list_a = data_Grid_5.ToList();
+                                data_Grid_5_list_b = data_Grid_5.ToList();
+
+                                //data_pdfhistories = (data_pdfhistories_var.OrderBy(p => p.Id)).ToList();
+
+                                //data_finals_ori.Add(data_final_ori);
+                                //Data_Receive_Grid.ItemsSource = data_finals_ori;
+                                counter_data = counter_data + 1;
+                            }
+                            Application.Current.Dispatcher.Invoke(new Action(() =>
+                            {
+                                //MessageBox.Show("Port is opened. Start Collecting Data", application_name);
+                                //this.DataContext = this;
+                                Data_Receive_Grid_1.ItemsSource = data_Grid_1_list_a;
+                                Data_Receive_Grid_1.ItemsSource = data_Grid_1_list_b;
+
+                                Data_Receive_Grid_2.ItemsSource = data_Grid_2_list_a;
+                                Data_Receive_Grid_2.ItemsSource = data_Grid_2_list_b;
+
+                                Data_Receive_Grid_3.ItemsSource = data_Grid_3_list_a;
+                                Data_Receive_Grid_3.ItemsSource = data_Grid_3_list_b;
+
+                                //var x = data_Average[0] != null ? 12 : (int?)null;
+                                //if (val % 2 == 1) { output = “Number is odd”; } else { output = “Number is even”; }
+                                if (data_Average.Count() == 1) { Average_1.Text = data_Average[0].Measures; } else {; }
+                                if (data_Average.Count() == 2) { Average_2.Text = data_Average[1].Measures; } else {; }
+                                if (data_Average.Count() == 3) { Average_3.Text = data_Average[2].Measures; } else {; }
+                                if (data_Average.Count() == 4) { Average_4.Text = data_Average[3].Measures; } else {; }
+
+                            }));
 
                         }
+
+
+                        else if (data_finals_update.Count % NumberGrain_Frekuensi == 0 && data_finals_update.Count > 0 && StatusListen == true)
+                        {
+                            Sensor_input_Helper.Command_MoisturAggregate(mySerialPort);
+
+                            if (data_Average.Count() == current_interval + 1)
+                            {
+                                mySerialPort.DiscardInBuffer();
+                                mySerialPort.DiscardOutBuffer();
+
+                                mySerialPort.Close();
+                                StatusListen = false;
+
+                                /*
+                                Application.Current.Dispatcher.Invoke(new Action(() =>
+                                {
+                                    //MessageBox.Show("Port is opened. Start Collecting Data", application_name);
+                                    //this.DataContext = this;
+                                    //RunSensor();
+
+                                    MessageBox.Show("Please Wait Time Interval", application_name);
+
+                                }));
+                                */
+                                Thread.Sleep(delay);
+                                OpenCon_Port_local(mySerialPort, BaudRate);
+                                //string start_command = String.Concat(ResultGrain," ", ResultMeasure);
+
+
+                                //mySerialPort.DiscardInBuffer();
+                                //mySerialPort.DiscardOutBuffer();
+
+
+                                //Sensor_input_Helper.Command_Write(mySerialPort, ResultMeasure);
+                                //StatusListen = true;
+                                current_interval = current_interval + 1;
+                                Sensor_input_Helper.Command_Write(mySerialPort, ResultGrain);
+                                Sensor_input_Helper.Command_Write(mySerialPort, ResultMeasure);
+                                //MessageBox.Show("Start Next Sequence", application_name);
+
+                                /*Application.Current.Dispatcher.Invoke(new Action(() =>
+                                {
+                                    //MessageBox.Show("Port is opened. Start Collecting Data", application_name);
+                                    //this.DataContext = this;
+                                    //RunSensor();
+                                    //Sensor_input_Helper.Command_Write(mySerialPort, ResultGrain);
+                                    //Sensor_input_Helper.Command_Write(mySerialPort, ResultMeasure);
+                                    MessageBox.Show("Start Next Sequence", application_name);
+
+                                }));*/
+                            }
+
+                            Console.WriteLine("Nilai Else If adalah: " + Result_Parsing);
+
+                        }
+
                         else
                         {
-                            data_finals_update.Add(data_final_update);
-                            data_finals_update_2.Add(data_final_update);
-
-                            //var result = from db.MyTable.Where(d => (double)d.Price >= minValue && (double)d.Price <= maxValue)
-
-                            var data_Grid_1 = data_finals_update.Where(p => p.Id > 0 && p.Id <= 1 * NumberGrain_Frekuensi);
-                            data_Grid_1_list_a = data_Grid_1.ToList();
-                            data_Grid_1_list_b = data_Grid_1.ToList();
-
-                            var data_Grid_2 = data_finals_update.Where(p => p.Id > 1 * NumberGrain_Frekuensi && p.Id <= 2 * NumberGrain_Frekuensi);
-                            data_Grid_2_list_a = data_Grid_2.ToList();
-                            data_Grid_2_list_b = data_Grid_2.ToList();
-
-                            var data_Grid_3 = data_finals_update.Where(p => p.Id > 2 * NumberGrain_Frekuensi && p.Id <= 3 * NumberGrain_Frekuensi);
-                            data_Grid_3_list_a = data_Grid_3.ToList();
-                            data_Grid_3_list_b = data_Grid_3.ToList();
-
-                            var data_Grid_4 = data_finals_update.Where(p => p.Id > 3 * NumberGrain_Frekuensi && p.Id <= 4 * NumberGrain_Frekuensi);
-                            data_Grid_4_list_a = data_Grid_4.ToList();
-                            data_Grid_4_list_b = data_Grid_4.ToList();
-
-                            var data_Grid_5 = data_finals_update.Where(p => p.Id > 4 * NumberGrain_Frekuensi && p.Id <= 5 * NumberGrain_Frekuensi);
-                            data_Grid_5_list_a = data_Grid_5.ToList();
-                            data_Grid_5_list_b = data_Grid_5.ToList();
-
-                            //data_pdfhistories = (data_pdfhistories_var.OrderBy(p => p.Id)).ToList();
-
-                            //data_finals_ori.Add(data_final_ori);
-                            //Data_Receive_Grid.ItemsSource = data_finals_ori;
-                            
+                            Console.WriteLine("Nilai Else adalah: " + Result_Parsing);
                         }
-                        Application.Current.Dispatcher.Invoke(new Action(() =>
-                        {
-                            //MessageBox.Show("Port is opened. Start Collecting Data", application_name);
-                            //this.DataContext = this;
-                            Data_Receive_Grid_1.ItemsSource = data_Grid_1_list_a;
-                            Data_Receive_Grid_1.ItemsSource = data_Grid_1_list_b;
 
-                            Data_Receive_Grid_2.ItemsSource = data_Grid_2_list_a;
-                            Data_Receive_Grid_2.ItemsSource = data_Grid_2_list_b;
 
-                            Data_Receive_Grid_3.ItemsSource = data_Grid_3_list_a;
-                            Data_Receive_Grid_3.ItemsSource = data_Grid_3_list_b;
-
-                            //var x = data_Average[0] != null ? 12 : (int?)null;
-                            //if (val % 2 == 1) { output = “Number is odd”; } else { output = “Number is even”; }
-                            if (data_Average.Count() == 1) { Average_1.Text = data_Average[0].Measures; } else {; }
-                            if (data_Average.Count() == 2) { Average_2.Text = data_Average[1].Measures; } else {; }
-                            if (data_Average.Count() == 3) { Average_3.Text = data_Average[2].Measures; } else {; }
-                            if (data_Average.Count() == 4) { Average_4.Text = data_Average[3].Measures; } else {; }
-
-                        }));
-                        counter_data = counter_data + 1;
                     }
-
-                    
-                    else if (data_finals_update.Count % NumberGrain_Frekuensi == 0 && data_finals_update.Count > 0 && StatusListen == true)
-                    {
-                        Sensor_input_Helper.Command_MoisturAggregate(mySerialPort);
-                        mySerialPort.Close();
-                        StatusListen = false;
-                        //mySerialPort.DiscardInBuffer();
-                        //mySerialPort.DiscardOutBuffer();
-                        Application.Current.Dispatcher.Invoke(new Action(() =>
-                        {
-                            //MessageBox.Show("Port is opened. Start Collecting Data", application_name);
-                            //this.DataContext = this;
-                            
-
-                            RunSensor();
-                        }));
-                        
-                        Console.WriteLine("Nilai Else If adalah: " + Result_Parsing);
-                    }
-                    
-                    else
-                    {
-                        Console.WriteLine("Nilai Else adalah: " + Result_Parsing);
-                    }
-
-
                 }
             }
             catch (Exception ex)
